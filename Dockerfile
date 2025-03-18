@@ -11,5 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制整个项目到容器内
 COPY . .
 
+# 设置 PYTHONPATH，使得 Python 能在 /markdown_operation 中查找模块
+ENV PYTHONPATH="/markdown_operation"
+
 # 设置容器启动时运行的命令，比如运行 main.py
 CMD ["/bin/bash"]
