@@ -1,0 +1,21 @@
+base_folder = 'D:/Notes/'
+exclude_folders = ['工作笔记']
+
+# cos config
+secret_id = 'xxx'     # 替换为用户的 SecretId，请登录访问管理控制台进行查看和管理，https://console.cloud.tencent.com/cam/capi
+secret_key = 'xxx'   # 替换为用户的 SecretKey，请登录访问管理控制台进行查看和管理，https://console.cloud.tencent.com/cam/capi
+region = 'ap-shanghai'
+bucket = 'xxx'
+
+# typecho config
+website_xmlrpc_url = '' # https://www.abc.com/index.php/action/xmlrpc
+website_username = 'xxx'
+website_password = 'xxx'
+
+# mysql config
+mysql_host = 'localhost'
+mysql_port = 3306
+mysql_username = 'xxx'
+mysql_password = 'xxx'
+mysql_typecho_database = 'typecho'
+mysql_typecho_table_prefix = 'typecho_'
