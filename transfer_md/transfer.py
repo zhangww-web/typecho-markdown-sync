@@ -2,8 +2,8 @@ import os
 import re
 import shutil
 import uuid
-from upload_img import upload_image
-from download_img import download_image
+from transfer_md.upload_img import upload_image
+from transfer_md.download_img import download_image
 
 def extract_image_paths(content):
     """
