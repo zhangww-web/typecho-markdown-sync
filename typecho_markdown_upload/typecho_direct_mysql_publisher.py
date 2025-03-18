@@ -1,3 +1,4 @@
+#typecho_direct_mysql_publisher.py
 import pymysql
 import time
 

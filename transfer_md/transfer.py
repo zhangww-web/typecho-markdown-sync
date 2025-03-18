@@ -2,39 +2,8 @@ import os
 import re
 import shutil
 import uuid
-import requests
-from urllib.parse import urlparse
 from upload_img import upload_image
 
-
-def download_image(url, output_path):
-    """
-    从网络下载图片并保存到指定路径
-    """
-    try:
-        response = requests.get(url, stream=True)
-        if response.status_code == 200:
-            # 获取图片扩展名
-            parsed_url = urlparse(url)
-            ext = os.path.splitext(parsed_url.path)[1]
-            if not ext:
-                ext = '.png'  # 默认使用 .png 扩展名
-
-            # 生成新的文件名
-            new_filename = f"{uuid.uuid4()}{ext}"
-            dest_path = os.path.join(output_path, new_filename)
-
-            # 保存图片
-            with open(dest_path, 'wb') as f:
-                response.raw.decode_content = True
-                shutil.copyfileobj(response.raw, f)
-            print(f"已下载: {url} → {dest_path}")
-            return new_filename
-        else:
-            print(f"警告: 无法下载图片 {url}，状态码: {response.status_code}")
-    except Exception as e:
-        print(f"错误: 下载图片 {url} 时出错: {e}")
-    return None
 
 def extract_image_paths(content):
     """
@@ -209,29 +178,53 @@ def process_md_file_remote(md_file):
     print(f"已更新: {md_file}")
 
 
-def process_md_files(input_path,output_path,type):
+def scan_files(base_folder, exclude_folders):
+    """
+    扫描 base_folder 目录下所有 Markdown 文件，
+    并排除路径中包含 exclude_folders 中任一字符串的目录
+    """
+    md_files = []
+    for root, dirs, files in os.walk(base_folder):
+        # 如果当前目录中包含需要排除的文件夹，则跳过该目录
+        if any(exclude in root for exclude in exclude_folders):
+            continue
+        for file in files:
+            if file.lower().endswith('.md'):
+                md_files.append(os.path.join(root, file))
+    return md_files
+
+def process_md_files(input_path, output_path, type, exclude_folders=None):
+    """
+    处理输入目录下所有 Markdown 文件，并将处理后的图片保存到 output_path。
+    type 参数决定了使用哪种处理方式：
+        type == 1: process_md_file_local
+        type == 2: process_md_file_with_assets
+        type == 3: process_md_file_remote
+    """
     # 创建输出目录（如果不存在）
     os.makedirs(output_path, exist_ok=True)
 
+    # 获取 Markdown 文件列表
+    if exclude_folders is None:
+        exclude_folders = []
+    md_files = scan_files(input_path, exclude_folders)
+
     # 遍历处理所有 Markdown 文件
-    for root, _, files in os.walk(input_path):
-        for file in files:
-            if file.lower().endswith('.md'):
-                md_file = os.path.join(root, file)
-                if type==1:
-                    process_md_file_local(md_file, output_path)
-                elif type==2:
-                    process_md_file_with_assets(md_file,output_path)
-                elif type==3:
-                    process_md_file_remote(md_file)
-                else:
-                    pass
+    for md_file in md_files:
+        if type == 1:
+            process_md_file_local(md_file, output_path)   #url改为本地，图片存output_path
+        elif type == 2:
+            process_md_file_with_assets(md_file, output_path)  #url改为本地，图片和md都存output_path
+        elif type == 3:
+            process_md_file_remote(md_file)    #url改公网链接
+        else:
+            print(f"未知的处理类型: {type}")
 
     print("处理完成！所有图片已保存至:", os.path.abspath(output_path))
 
 
 if __name__ == "__main__":
     type=1
-    input_path = r'D:\folder\test\tt'
-    output_path = r'D:\folder\test\output2'
+    input_path = r'D:\folder\study\md_files\Java\zbparse'
+    output_path = r'D:\folder\test\output'
     process_md_files(input_path,output_path,type)

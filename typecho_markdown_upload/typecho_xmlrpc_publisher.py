@@ -1,3 +1,4 @@
+#typecho_xmlrpc_publisher.py
 # typecho api调用
 from pytypecho import Post, Typecho
 
