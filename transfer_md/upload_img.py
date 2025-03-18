@@ -1,6 +1,5 @@
 import requests
 
-
 def upload_image(img_path: str) -> str:
     """
     上传本地图片到 easyimage 图床，并返回图片的公网地址。
