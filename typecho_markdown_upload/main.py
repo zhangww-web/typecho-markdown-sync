@@ -1,4 +1,3 @@
-#main.py
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 import logging
@@ -39,10 +38,9 @@ def execute_flow_with_typecho_xmlrpc(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         file_base_name = os.path.splitext(os.path.basename(file_path))[0]
         md_source_text = file.read()
-    # category_name = os.path.basename(os.path.dirname(file_path))
     # 注意：XML-RPC 方式不需要 category_name 参数
     post_id = typecho_publisher.publish_post(file_base_name, md_source_text)
-    print('发布成功 --> ' + file_base_name + ' - ' + str(post_id))
+    logging.info('发布成功 --> %s - %s', file_base_name, post_id)
 
 
 def execute_flow_with_typecho_mysql(file_path):
@@ -55,18 +53,18 @@ def execute_flow_with_typecho_mysql(file_path):
     process_md_file_remote(file_path)
 
     with open(file_path, 'r', encoding='utf-8') as file:
-        file_base_name = os.path.splitext(os.path.basename(file_path))[0]  #os.path.basename(path)返回给定路径中的最后一个组件
+        file_base_name = os.path.splitext(os.path.basename(file_path))[0]
         md_source_text = file.read()
-
     # 从文件的上一级目录获取分类名称
-    category_name = os.path.basename(os.path.dirname(file_path)) #os.path.dirname(path)返回给定路径中目录部分(去掉最后一个)
-
+    category_name = os.path.basename(os.path.dirname(file_path))
+    logging.info(f"category_name：{category_name} file_base_name:{file_base_name}")
     post_id = mysql_publisher.publish_post(file_base_name, md_source_text, category_name)
-    print('发布成功 --> ' + file_base_name + ' - ' + str(post_id))
+    logging.info('发布成功 --> %s - %s', file_base_name, post_id)
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level='ERROR')
+    # 设置日志级别为 INFO，这样可以看到 INFO 级别的日志输出
+    logging.basicConfig(level=logging.INFO)
 
     # 获取 base_folder 和 exclude_folders 配置
     base_folder = os.getenv('BASE_FOLDER')
