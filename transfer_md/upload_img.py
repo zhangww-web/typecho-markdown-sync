@@ -1,5 +1,9 @@
+import os
 import requests
+# 加载 .env 文件中的环境变量
+from dotenv import load_dotenv
 
+load_dotenv()
 def upload_image(img_path: str) -> str:
     """
     上传本地图片到 easyimage 图床，并返回图片的公网地址。
@@ -11,13 +15,13 @@ def upload_image(img_path: str) -> str:
       图片在图床上的公网地址
 
     API 参数说明：
-      - API 地址: http://124.71.159.195:1000/api/index.php
+      - API 地址: 图床提供的API
       - 图片文件对应的 POST 参数名: image
-      - 自定义 body 参数: {"token": "1a61048560d9a63430816f98ba5a4fb0"}
+      - 自定义 body 参数: {"token": "xxxxxx"}
       - 响应 JSON 中的图片地址字段路径: url
     """
-    url = "https://pic.bitday.top/api/index.php"
-    token = "3b54c300cba118d185a4f9d2da9af513"
+    url = os.getenv('IMG_URL')
+    token = os.getenv('IMG_TOKEN')
 
     try:
         with open(img_path, "rb") as f:

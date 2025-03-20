@@ -15,4 +15,4 @@ COPY . .
 ENV PYTHONPATH="/markdown_operation"
 
 # 设置容器启动时运行的命令，比如运行 main.py
-CMD ["/bin/bash"]
+#CMD ["/bin/bash"]

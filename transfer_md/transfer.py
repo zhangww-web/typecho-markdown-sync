@@ -2,8 +2,14 @@ import os
 import re
 import shutil
 import uuid
+
+from dotenv import load_dotenv
+
 from transfer_md.upload_img import upload_image
 from transfer_md.download_img import download_image
+import sys
+# 加载 .env 文件中的环境变量
+load_dotenv()
 
 def extract_image_paths(content):
     """
@@ -12,6 +18,7 @@ def extract_image_paths(content):
     pattern_md = re.compile(r'!\[.*?\]\((.*?)\)')
     pattern_html = re.compile(r'<img\s+[^>]*src\s*=\s*"(.*?)"')
     return set(pattern_md.findall(content) + pattern_html.findall(content))
+
 
 def process_local_image_copy(abs_img_path, dest_folder):
     """
@@ -22,6 +29,7 @@ def process_local_image_copy(abs_img_path, dest_folder):
     dest_path = os.path.join(dest_folder, new_filename)
     shutil.copy2(abs_img_path, dest_path)
     return new_filename
+
 
 def process_md_file_local(md_file, output_path):
     """
@@ -40,6 +48,7 @@ def process_md_file_local(md_file, output_path):
 
     # 获取当前 md 文件所在目录
     md_dir = os.path.dirname(md_file)
+    abs_output_path = os.path.abspath(output_path)
 
     for img_path in img_paths:
         # 判断图片路径是本地路径还是网络 URL
@@ -56,6 +65,12 @@ def process_md_file_local(md_file, output_path):
                 abs_img_path = img_path
             else:
                 abs_img_path = os.path.normpath(os.path.join(md_dir, img_path))
+            abs_img_path = os.path.abspath(abs_img_path)
+
+            # 如果图片已经在 output 目录中，直接跳过复制
+            if abs_img_path.startswith(abs_output_path):
+                print(f"跳过已存在于 output 文件夹的图片: {abs_img_path}")
+                continue
 
             if os.path.exists(abs_img_path):
                 if os.path.isfile(abs_img_path):  # 确保是文件而不是文件夹
@@ -75,6 +90,7 @@ def process_md_file_local(md_file, output_path):
     with open(md_file, 'w', encoding='utf-8') as f:
         f.write(content)
     print(f"已更新: {md_file}")
+
 
 def process_md_file_with_assets(md_file, output_base_path):
     """
@@ -136,6 +152,7 @@ def process_md_file_with_assets(md_file, output_base_path):
         f.write(content)
     print(f"已更新: {target_md_path}")
 
+
 def process_md_file_remote(md_file):
     """
     处理一个 Markdown 文件：
@@ -193,6 +210,7 @@ def scan_files(base_folder, exclude_folders):
                 md_files.append(os.path.join(root, file))
     return md_files
 
+
 def process_md_files(input_path, output_path, type, exclude_folders=None):
     """
     处理输入目录下所有 Markdown 文件，并将处理后的图片保存到 output_path。
@@ -212,11 +230,11 @@ def process_md_files(input_path, output_path, type, exclude_folders=None):
     # 遍历处理所有 Markdown 文件
     for md_file in md_files:
         if type == 1:
-            process_md_file_local(md_file, output_path)   #url改为本地，图片存output_path
+            process_md_file_local(md_file, output_path)  # url改为本地，图片存output_path
         elif type == 2:
-            process_md_file_with_assets(md_file, output_path)  #url改为本地，图片和md都存output_path
+            process_md_file_with_assets(md_file, output_path)  # url改为本地，assets方式，图片和md文件都存output_path
         elif type == 3:
-            process_md_file_remote(md_file)    #url改公网链接
+            process_md_file_remote(md_file)  # 图片url改为公网链接
         else:
             print(f"未知的处理类型: {type}")
 
@@ -224,7 +242,19 @@ def process_md_files(input_path, output_path, type, exclude_folders=None):
 
 
 if __name__ == "__main__":
-    type=1
-    input_path = r'D:\folder\study\md_files\Java\zbparse'
-    output_path = r'D:\folder\test\output'
-    process_md_files(input_path,output_path,type)
+    # 从命令行获取 type 参数，如果未传入则默认使用 1
+    if len(sys.argv) > 1:
+        try:
+            type_value = int(sys.argv[1])
+        except ValueError:
+            print("第一个参数必须为整数，表示处理类型（1, 2 或 3）")
+            sys.exit(1)
+    else:
+        type_value = 3
+
+    # 这里的输入输出路径根据实际情况修改
+    # input_path = os.getenv('BASE_FOLDER')
+    input_path=r'D:\folder\study\md_files'
+    # output_path = os.getenv('OUTPUT_FOLDER')
+    output_path=r'D:\folder\study\md_files\output'
+    process_md_files(input_path, output_path, type_value)
