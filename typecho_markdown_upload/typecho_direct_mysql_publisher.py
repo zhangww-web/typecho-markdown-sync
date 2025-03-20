@@ -34,9 +34,6 @@ class TypechoDirectMysqlPublisher:
             })
 
     def __get_category_id(self, category_name):
-        """
-        从 self.__exist_categories 查找匹配的分类 ID
-        """
         for item in self.__exist_categories:
             if item['name'] == category_name:
                 return item['mid']
@@ -84,18 +81,17 @@ class TypechoDirectMysqlPublisher:
 
     def publish_post(self, title, content, category):
         """
-        如果同一分类下 (category) 已存在相同 title，则直接返回已存在的 cid；
-        否则插入新文章并返回新 cid。
+        如果 (category, title) 已存在 → 更新旧文章
+        否则 → 插入新文章
         """
         cursor = self.__db.cursor()
 
-        # 1. 获取分类 ID（不存在则插入）
+        # 1. 获取分类 ID（若不存在则新建）
         mid = self.__get_category_id(category)
         if mid < 0:
             mid = self.__add_category(category)
 
-        # 2. 查重：同一分类下 (mid) 是否已存在相同 title
-        #    通过连接 contents & relationships 表判断
+        # 2. 查找同一分类下，是否已存在相同 title 的文章
         check_sql = """
             SELECT c.cid
             FROM %s c
@@ -111,44 +107,62 @@ class TypechoDirectMysqlPublisher:
         )
         cursor.execute(check_sql)
         exist_row = cursor.fetchone()
-        if exist_row:
-            # 已有同标题文章，直接返回
-            print(f"[INFO] 发现同一分类下已存在相同标题: {title}, cid={exist_row[0]}，跳过插入。")
-            return exist_row[0]
 
-        # 3. 插入新文章
         now_time_int = int(time.time())
         content = '<!--markdown-->' + content
 
-        insert_sql = (
-            "INSERT INTO %s "
-            "(`title`, `slug`, `created`, `modified`, `text`, `order`, `authorId`, `template`, `type`, `status`, `password`, `commentsNum`, `allowComment`, `allowPing`, `allowFeed`, `parent`) "
-            "VALUES "
-            "('%s', NULL, %d, %d, '%s', 0, 1, NULL, 'post', 'publish', NULL, 0, '1', '1', '1', 0)"
-        ) % (
-            self.__contents_table_name,
-            escape_string(title),
-            now_time_int,
-            now_time_int,
-            escape_string(content)
-        )
-        cursor.execute(insert_sql)
-        cid = cursor.lastrowid
+        if exist_row:
+            # ========== 执行更新逻辑 ==========
+            cid = exist_row[0]
+            update_sql = """
+                UPDATE %s
+                SET modified=%d,
+                    text='%s'
+                WHERE cid=%d
+            """ % (
+                self.__contents_table_name,
+                now_time_int,
+                escape_string(content),
+                cid
+            )
+            cursor.execute(update_sql)
 
-        # 4. 更新 slug = cid
-        update_slug_sql = (
-            "UPDATE %s SET slug=%d WHERE cid=%d"
-        ) % (self.__contents_table_name, cid, cid)
-        cursor.execute(update_slug_sql)
+            # 如果你需要修改 slug、authorId、status 等字段，可在这里加上
+            # 不需要改 relationships (分类关系) 和分类计数，因为 category 没变
 
-        # 5. 建立文章与分类的关系
-        self.__insert_relationship(cursor, cid, mid)
+            print(f"[INFO] 更新文章成功: title={title}, cid={cid}, category={category}")
 
-        # 6. 更新分类下文章数
-        self.__update_category_count(cursor, mid)
+        else:
+            # ========== 执行插入逻辑 ==========
+            insert_sql = (
+                "INSERT INTO %s "
+                "(`title`, `slug`, `created`, `modified`, `text`, `order`, `authorId`, `template`, `type`, `status`, `password`, `commentsNum`, `allowComment`, `allowPing`, `allowFeed`, `parent`) "
+                "VALUES "
+                "('%s', NULL, %d, %d, '%s', 0, 1, NULL, 'post', 'publish', NULL, 0, '1', '1', '1', 0)"
+            ) % (
+                self.__contents_table_name,
+                escape_string(title),
+                now_time_int,
+                now_time_int,
+                escape_string(content)
+            )
+            cursor.execute(insert_sql)
+            cid = cursor.lastrowid
 
-        # 7. 提交
+            # slug = cid
+            update_slug_sql = (
+                "UPDATE %s SET slug=%d WHERE cid=%d"
+            ) % (self.__contents_table_name, cid, cid)
+            cursor.execute(update_slug_sql)
+
+            # 建立文章与分类的关系
+            self.__insert_relationship(cursor, cid, mid)
+
+            # 分类下文章数 +1
+            self.__update_category_count(cursor, mid)
+
+            print(f"[INFO] 插入新文章成功: title={title}, cid={cid}, category={category}")
+
+        # 3. 提交事务
         self.__db.commit()
-
-        print(f"[INFO] 插入新文章成功: title={title}, cid={cid}, category={category}")
         return cid
