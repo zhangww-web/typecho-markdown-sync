@@ -194,6 +194,35 @@ def process_md_file_remote(md_file):
         f.write(content)
     print(f"已更新: {md_file}")
 
+def add_language_to_codeblocks(filepath, language="text"):
+    '''
+    若代码块没有指定语言，Typera中能正常显示，但是博客中的markdown解析器通常会错误显示。
+    '''
+    with open(filepath, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    in_code_block = False
+    new_lines = []
+    for line in lines:
+        stripped = line.strip()
+        # 判断是否为代码块标记
+        if stripped.startswith("```"):
+            if not in_code_block:
+                # 当前为代码块的起始位置
+                # 如果这一行只有三个反引号，则添加语言参数
+                if stripped == "```":
+                    # 这里使用replace仅替换第一次出现的```，保留原有的换行符和空白
+                    line = line.replace("```", f"```{language}", 1)
+                in_code_block = True
+            else:
+                # 当前为代码块的结束位置，不添加语言
+                in_code_block = False
+        new_lines.append(line)
+
+    # 将修改后的内容写回文件（也可选择写入新文件）
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+
 
 def scan_files(base_folder, exclude_folders):
     """
@@ -218,6 +247,7 @@ def process_md_files(input_path, output_path, type, exclude_folders=None):
         type == 1: process_md_file_local
         type == 2: process_md_file_with_assets
         type == 3: process_md_file_remote
+        type == 4:
     """
     # 创建输出目录（如果不存在）
     os.makedirs(output_path, exist_ok=True)
@@ -235,10 +265,12 @@ def process_md_files(input_path, output_path, type, exclude_folders=None):
             process_md_file_with_assets(md_file, output_path)  # url改为本地，assets方式，图片和md文件都存output_path
         elif type == 3:
             process_md_file_remote(md_file)  # 图片url改为公网链接
+        elif type == 4:
+            add_language_to_codeblocks(md_file)
         else:
             print(f"未知的处理类型: {type}")
 
-    print("处理完成！所有图片已保存至:", os.path.abspath(output_path))
+    print("该文件夹下的md_files已全部处理完成！", os.path.abspath(input_path))
 
 
 if __name__ == "__main__":
@@ -247,14 +279,12 @@ if __name__ == "__main__":
         try:
             type_value = int(sys.argv[1])
         except ValueError:
-            print("第一个参数必须为整数，表示处理类型（1, 2 或 3）")
+            print("第一个参数必须为整数，表示处理类型（1, 2 , 3, 4）")
             sys.exit(1)
     else:
-        type_value = 3
+        type_value = 4
 
     # 这里的输入输出路径根据实际情况修改
-    # input_path = os.getenv('BASE_FOLDER')
-    input_path=r'D:\folder\study\md_files'
-    # output_path = os.getenv('OUTPUT_FOLDER')
-    output_path=r'D:\folder\study\md_files\output'
+    input_path = os.getenv('BASE_FOLDER')  #docker环境
+    output_path = os.getenv('OUTPUT_FOLDER')
     process_md_files(input_path, output_path, type_value)

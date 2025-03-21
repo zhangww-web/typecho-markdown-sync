@@ -1,12 +1,25 @@
 ## 同步本地Markdown至Typecho站点
 
-场景：本人喜欢在本地用Typora写markdown文件，但又想同时同步至Typecho发表成文章；且由于md文件并不是一成不变的，经常需要对各个文件缝缝补补，要能实现本地更新/同步至博客更新。
+本项目基于https://github.com/Sundae97/typecho-markdown-file-publisher
 
-亲测适配：Typecho1.2  php7.4.33
+实现效果：
+
+- [x] 将markdown发布到typecho
+- [x] 发布前将markdown的图片资源上传到TencentCloud的COS中, 并替换markdown中的图片链接
+- [x] 将md所在的文件夹名称作为post的category(mysql发布可以插入category, xmlrpc接口暂时不支持category操作)
+- [x] 以title和category作为文章的唯一标识，如果数据库中已有该数据，将会更新现有文章，否则新增文章。
+
+环境：Typecho1.2.1  php7.4.33
 
 ### 项目目录
 
 ![image-20250319173057792](D:\folder\study\md_files\output\image-20250319173057792.png)
+
+`typecho_markdown_upload/main.py`是上传md文件到站点的核心脚本
+
+`transfer_md/transfer.py`是对md文件进行预处理的脚本。
+
+
 
 ### **核心思路**
 
@@ -58,7 +71,7 @@ github地址：[icret/EasyImages2.0: 简单图床 - 一款功能强大无数据�
 
 **文件结构统一**：
 
-```
+```text
 md_files
 ├── category1
 │   ├── file1.md
@@ -94,7 +107,7 @@ md_files
 
 **初始化本地仓库**：
 
-```
+```text
 git init
 ```
 
@@ -102,26 +115,26 @@ git init
 
 将远程仓库地址添加为 `origin`（请将 `http://xxx` 替换为你的实际仓库地址）：
 
-```
+```text
 git remote add origin http://xxx
 ```
 
 **添加文件并提交**：
 
-```
+```text
 git add .
 git commit -m "Initial commit"
 ```
 
 **推送到远程仓库：**
 
-```
+```text
 git push -u origin master
 ```
 
-**后续更新：**
+**后续更新（可写个.bat批量执行）：**
 
-```
+```text
 git add .
 git commit -m "更新了xxx内容"
 git push
@@ -133,11 +146,11 @@ git push
 
 **1. 确保脚本能够连接到 Typecho 使用的数据库**
 
-本博客使用 docker-compose 部署 Typecho（参考：[【好玩儿的Docker项目】10分钟搭建一个Typecho博客｜太破口！念念不忘，必有回响！-我不是咕咕鸽](https://blog.laoda.de/archives/docker-compose-install-typecho)）。为了让脚本能访问 Typecho 的数据库，我将 Python 应用也通过 docker-compose 部署，这样所有服务均在同一网络中，互相之间可以直接通信。
+本博客使用 docker-compose 部署 Typecho（参考：[【好玩儿的Docker项目】10分钟搭建一个Typecho博客｜太破口！念念不忘，必有回响！-我不是咕咕鸽](https://blog.laoda.de/archives/docker-compose-install-typecho)）。为了让脚本能访问 Typecho 的数据库，我将 Python 应用pyapp也通过 docker-compose 部署，这样所有服务均在同一网络中，互相之间可以直接通信。
 
 参考docker-compose.yml如下：
 
-```
+```text
 services:
   nginx:
     image: nginx
@@ -171,6 +184,8 @@ services:
   pyapp:
     build: ./markdown_operation  # Dockerfile所在的目录
     restart: "no"
+    volumes:
+            - /home/zy123/md_files:/markdown_operation/md_files
     networks:
       - web
     env_file:
@@ -201,9 +216,13 @@ networks:
 
 
 
-**2. 将版本控制的 md_files 仓库克隆到 markdown_operation 目录中**
+**2. 将 `md_files` 挂载到容器中，保持最新内容同步**
 
-确保在容器内可以直接访问到 md_files 内容，因此我们将使用 Git 进行版本控制的 md_files 仓库克隆到 markdown_operation 内部。这样，无论是执行脚本还是其他操作，都能轻松访问和更新 Markdown 文件。
+这样有几个优势：
+
+- 不需要每次构建镜像或进入容器手动拉取；
+- 本地更新 `md_files` 后，容器内自动同步，无需额外操作；
+- 保持了宿主机上的 Git 版本控制和容器内的数据一致性。
 
 
 
@@ -211,23 +230,31 @@ networks:
 
 `pyapp`是本Python应用在容器内的名称。
 
-构建镜像：
+1.构建镜像：
 
-```
+```text
 docker-compose build pyapp 
 ```
 
-启动容器并进入 Bash：
+2.启动容器并进入 Bash：
 
-```
+```text
 docker-compose run --rm -it pyapp /bin/bash
 ```
 
-在容器内运行脚本：
+3.在容器内运行脚本：
 
-```
+```text
 python typecho_markdown_upload/main.py
 ```
+
+2、3两步可合并为：
+
+```text
+docker-compose run --rm pyapp python typecho_markdown_upload/main.py
+```
+
+![image-20250320103325650](https://pic.bitday.top/i/2025/03/20/h37pze-0.png)
 
 此时可以打开博客验证一下是否成功发布文章了！
 
@@ -235,37 +262,68 @@ python typecho_markdown_upload/main.py
 
 1️⃣ 进入 MySQL 容器：
 
-```
-docker compose exec mysql mysql -uroot -p
+```text
+docker-compose exec mysql mysql -uroot -p
 # 输入你的 root 密码
 ```
 
 2️⃣ 切换到 Typecho 数据库并列出表：
 
-```
+```text
 USE typecho;
 SHOW TABLES;
 ```
 
 3️⃣ 查看 `typecho_contents` 表结构（文章表）：
 
-```
+```text
 DESCRIBE typecho_contents;
-SHOW CREATE TABLE typecho_contents\G
+```
+
+```text
+mysql> DESCRIBE typecho_contents;
++--------------+------------------+------+-----+---------+----------------+
+| Field        | Type             | Null | Key | Default | Extra          |
++--------------+------------------+------+-----+---------+----------------+
+| cid          | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
+| title        | varchar(150)     | YES  |     | NULL    |                |
+| slug         | varchar(150)     | YES  | UNI | NULL    |                |
+| created      | int(10) unsigned | YES  | MUL | 0       |                |
+| modified     | int(10) unsigned | YES  |     | 0       |                |
+| text         | longtext         | YES  |     | NULL    |                |
+| order        | int(10) unsigned | YES  |     | 0       |                |
+| authorId     | int(10) unsigned | YES  |     | 0       |                |
+| template     | varchar(32)      | YES  |     | NULL    |                |
+| type         | varchar(16)      | YES  |     | post    |                |
+| status       | varchar(16)      | YES  |     | publish |                |
+| password     | varchar(32)      | YES  |     | NULL    |                |
+| commentsNum  | int(10) unsigned | YES  |     | 0       |                |
+| allowComment | char(1)          | YES  |     | 0       |                |
+| allowPing    | char(1)          | YES  |     | 0       |                |
+| allowFeed    | char(1)          | YES  |     | 0       |                |
+| parent       | int(10) unsigned | YES  |     | 0       |                |
+| views        | int(11)          | YES  |     | 0       |                |
+| agree        | int(11)          | YES  |     | 0       |                |
++--------------+------------------+------+-----+---------+----------------+
 ```
 
 4️⃣ 查询当前文章数量（确认执行前后有无变化）：
 
-```
+```text
 SELECT COUNT(*) AS cnt FROM typecho_contents;
 ```
 
 
 
+### **自动化**
+
+1.windows下写脚本自动/手动提交每日更新
+
+2.远程仓库监测到更新自动实现钩子脚本,更新md_files并执行脚本
+
+
+
 ### TODO
 
-- [x] 将markdown发布到typecho
-- [x] 发布前将markdown的图片资源上传到TencentCloud的COS中, 并替换markdown中的图片链接
-- [x] 将md所在的文件夹名称作为post的category(mysql发布可以插入category, xmlrpc接口暂时不支持category操作)
-- [ ] category的层级
-- [ ] 发布前先获取所有post信息, 不发布已经发布过的post
+- [ ] typecho_contents表中的slug字段代表链接中的日志缩略名，如wordpress风格 `/archives/{slug}.html`，目前是默认int自增，有需要的话可以在插入文章时手动设置该字段。
+
