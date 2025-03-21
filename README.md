@@ -13,7 +13,7 @@
 
 ### 项目目录
 
-![image-20250319173057792](D:\folder\study\md_files\output\image-20250319173057792.png)
+![image-20250319173057792](https://pic.bitday.top/i/2025/03/21/qimsxc-2.png)
 
 `typecho_markdown_upload/main.py`是上传md文件到站点的核心脚本
 
@@ -53,7 +53,7 @@ github地址：[icret/EasyImages2.0: 简单图床 - 一款功能强大无数据�
 
 配置完成后，即可实现图片自动上传，提升 Markdown 编辑体验。
 
-<img src="D:\folder\study\md_files\output\image-20250319180022461.png" alt="image-20250319180022461" style="zoom:67%;" />
+<img src="https://pic.bitday.top/i/2025/03/21/qimwlg-2.png" alt="image-20250319180022461" style="zoom:67%;" />
 
 
 
@@ -65,7 +65,7 @@ github地址：[icret/EasyImages2.0: 简单图床 - 一款功能强大无数据�
 2. 在 “插入图片时” 选项中，选择 **上传图片**。
 3. 在 “上传服务设定” 中选择 **PicGo**，并指定 PicGo 的安装路径。
 
-![image-20250319175707761](D:\folder\study\md_files\output\image-20250319175707761.png)
+![image-20250319175707761](https://pic.bitday.top/i/2025/03/21/qin8gd-2.png)
 
 
 

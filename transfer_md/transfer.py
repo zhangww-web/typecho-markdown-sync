@@ -282,7 +282,7 @@ if __name__ == "__main__":
             print("第一个参数必须为整数，表示处理类型（1, 2 , 3, 4）")
             sys.exit(1)
     else:
-        type_value = 4
+        type_value = 3
 
     # 这里的输入输出路径根据实际情况修改
     input_path = os.getenv('BASE_FOLDER')  #docker环境
