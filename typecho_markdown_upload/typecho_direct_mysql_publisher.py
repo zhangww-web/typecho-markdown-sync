@@ -77,6 +77,9 @@ class TypechoDirectMysqlPublisher:
         )
         cursor.execute(update_category_count_sql)
 
+    def normalize_content(content):
+        return content.replace('\r\n', '\n').replace('\r', '\n').strip()
+
     def publish_post(self, title, content, category):
         """
         如果 (category, title) 已存在，则对比旧内容与新内容：
@@ -112,7 +115,7 @@ class TypechoDirectMysqlPublisher:
             cid = exist_row[0]
             old_content = exist_row[1] or ""
 
-            if old_content.strip() == content_with_mark.strip():
+            if self.normalize_content(old_content) == self.normalize_content(content_with_mark):
                 # 内容相同，不更新
                 print(f"[INFO] 文章已存在且内容未修改: title={title}, cid={cid}, category={category}，跳过更新。")
                 return cid
