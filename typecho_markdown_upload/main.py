@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # 加载 .env 文件中的环境变量
 load_dotenv()
 
-from transfer_md.transfer import process_md_file_remote, scan_files  # 假设该模块中实现了相应函数
+from transfer_md.transfer import process_md_file_remote, scan_files, format_mdfile  # 假设该模块中实现了相应函数
 from typecho_xmlrpc_publisher import TypechoXmlRpcPublisher
 from typecho_direct_mysql_publisher import TypechoDirectMysqlPublisher
 
@@ -49,8 +49,8 @@ def execute_flow_with_typecho_mysql(file_path):
     这里 process_md_file_remote 用于处理 Markdown 文件（上传本地图片并替换为公网地址）。
     分类名称将从文件路径的上一级目录中获取。
     """
-    # 先对 Markdown 文件进行处理：上传本地图片并替换为公网地址
-    process_md_file_remote(file_path)
+    format_mdfile(file_path)  #对 Markdown 文件进行处理，会对公式块和代码块进行格式化，可注释这行
+    process_md_file_remote(file_path)  #上传本地图片并替换为公网地址
 
     with open(file_path, 'r', encoding='utf-8') as file:
         file_base_name = os.path.splitext(os.path.basename(file_path))[0]

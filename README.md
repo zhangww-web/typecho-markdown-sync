@@ -319,9 +319,28 @@ SELECT COUNT(*) AS cnt FROM typecho_contents;
 
 1.windows下写脚本自动/手动提交每日更新
 
-2.远程仓库监测到更新自动实现钩子脚本,更新md_files并执行脚本
+2.在 Linux 服务器上配置一个定时任务，定时执行 `git pull` 命令和启动脚本更新博客的命令。
 
+- 创建脚本`/home/zy123/typecho/deploy.sh`
 
+  ```text
+  #!/bin/bash
+  cd /home/zy123/md_files || exit
+  git pull
+  cd /home/zy123/typecho || exit
+  docker compose run --rm pyapp python typecho_markdown_upload/main.py
+  ```
+
+  赋予可执行权限`chmod +x /home/zy123/deploy.sh`
+
+- 编辑 Crontab 安排任务（每天0点10分执行）
+  打开 crontab 编辑器：$crontab -e$
+
+  ```
+  10 0 * * * /home/zy123/typecho/deploy.sh >> /home/zy123/typecho/deploy.log 2>&1
+  ```
+
+  
 
 ### TODO
 
