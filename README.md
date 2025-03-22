@@ -5,8 +5,9 @@
 实现效果：
 
 - [x] 将markdown发布到typecho
-- [x] 发布前将markdown的图片资源上传到TencentCloud的COS中, 并替换markdown中的图片链接
-- [x] 将md所在的文件夹名称作为post的category(mysql发布可以插入category, xmlrpc接口暂时不支持category操作)
+- [x] 发布前将markdown中的公式块和代码块进行格式化，确保能适配md解析器。
+- [x] 发布前将markdown的图片资源上传到自己搭建的图床Easyimage中（自行替换成阿里云OSS等）, 并替换markdown中的图片链接。
+- [x] 将md所在的文件夹名称作为post的category(mysql发布可以插入category, xmlrpc接口暂时不支持category操作)。
 - [x] 以title和category作为文章的唯一标识，如果数据库中已有该数据，将会更新现有文章，否则新增文章。
 
 环境：Typecho1.2.1  php8.1.0
