@@ -194,7 +194,7 @@ def process_md_file_remote(md_file):
         f.write(content)
     print(f"已更新: {md_file}")
 
-def add_language_to_codeblocks(filepath, language="text"):
+def format_mdfile(filepath, language="text"):
     '''
     若代码块没有指定语言，Typera中能正常显示，但是博客中的markdown解析器通常会错误显示。
     '''
@@ -217,6 +217,10 @@ def add_language_to_codeblocks(filepath, language="text"):
             else:
                 # 当前为代码块的结束位置，不添加语言
                 in_code_block = False
+        else:
+            # 在非代码块的行中，将同行 $$公式$$ 替换为 $公式$
+            # 使用正则表达式进行替换，注意采用非贪婪匹配
+            line = re.sub(r'\$\$(.+?)\$\$', r'$\1$', line)
         new_lines.append(line)
 
     # 将修改后的内容写回文件（也可选择写入新文件）
@@ -266,7 +270,7 @@ def process_md_files(input_path, output_path, type, exclude_folders=None):
         elif type == 3:
             process_md_file_remote(md_file)  # 图片url改为公网链接
         elif type == 4:
-            add_language_to_codeblocks(md_file)
+            format_mdfile(md_file)
         else:
             print(f"未知的处理类型: {type}")
 
@@ -282,9 +286,10 @@ if __name__ == "__main__":
             print("第一个参数必须为整数，表示处理类型（1, 2 , 3, 4）")
             sys.exit(1)
     else:
-        type_value = 3
+        type_value = 4
 
     # 这里的输入输出路径根据实际情况修改
     input_path = os.getenv('BASE_FOLDER')  #docker环境
+    # input_path = r'D:\folder\study\md_files'
     output_path = os.getenv('OUTPUT_FOLDER')
     process_md_files(input_path, output_path, type_value)
