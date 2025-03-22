@@ -9,7 +9,7 @@
 - [x] 将md所在的文件夹名称作为post的category(mysql发布可以插入category, xmlrpc接口暂时不支持category操作)
 - [x] 以title和category作为文章的唯一标识，如果数据库中已有该数据，将会更新现有文章，否则新增文章。
 
-环境：Typecho1.2.1  php7.4.33
+环境：Typecho1.2.1  php8.1.0
 
 ### 项目目录
 
