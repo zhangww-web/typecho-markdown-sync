@@ -49,8 +49,9 @@ def execute_flow_with_typecho_mysql(file_path):
     这里 process_md_file_remote 用于处理 Markdown 文件（上传本地图片并替换为公网地址）。
     分类名称将从文件路径的上一级目录中获取。
     """
-    format_mdfile(file_path)  #对 Markdown 文件进行处理，会对公式块和代码块进行格式化，可注释这行
-    process_md_file_remote(file_path)  #上传本地图片并替换为公网地址
+    #为了实现版本控制，linux上不对md_files作修改。请本地自行运行预处理脚本再git push！
+    # format_mdfile(file_path)  #对 Markdown 文件进行处理，会对公式块和代码块进行格式化
+    # process_md_file_remote(file_path)  #上传本地图片并替换为公网地址
 
     with open(file_path, 'r', encoding='utf-8') as file:
         file_base_name = os.path.splitext(os.path.basename(file_path))[0]
