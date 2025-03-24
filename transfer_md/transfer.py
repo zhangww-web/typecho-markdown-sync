@@ -194,10 +194,11 @@ def process_md_file_remote(md_file):
         f.write(content)
     print(f"已更新: {md_file}")
 
+
 def format_mdfile(filepath, output_path, language="text"):
     """
     对代码块进行格式化：若代码块没有指定语言，则添加指定语言。
-    同时将修改后的文件保存到 output_path/updated_files/<category> 下，由于md格式存在不确定性，脚本处理结果不一定符合预期！。
+    同时将修改后的文件保存到 output_path/<category> 下，由于md格式存在不确定性，脚本处理结果不一定符合预期！。
     """
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -205,24 +206,33 @@ def format_mdfile(filepath, output_path, language="text"):
     in_code_block = False
     new_lines = []
     # 匹配整行仅包含可选空白、可选列表标记和三个反引号（无其他内容）
-    pattern = re.compile(r'^(\s*(?:[-*+]\s+)?)(```)(\s*)$')
+    # 这个模式匹配开始的代码块标记，可能包含列表前缀（如- ```）
+    start_pattern = re.compile(r'^(\s*(?:[-*+]\s+)?)(`{3})(\s*)$')
+    # 匹配已经有语言标记的代码块开始
+    lang_pattern = re.compile(r'^(\s*(?:[-*+]\s+)?)(`{3})[a-zA-Z0-9_+-]+')
+    # 匹配代码块结束
+    end_pattern = re.compile(r'^(\s*)(`{3})(\s*)$')
 
     for line in lines:
         # 若不在代码块内，尝试匹配代码块起始行
         if not in_code_block:
-            match = pattern.match(line)
-            if match:
-                prefix, backticks, suffix = match.groups()
-                # 添加语言参数后重构该行（保留原始尾随空白）
-                line = f"{prefix}{backticks}{language}{suffix}\n" if not line.endswith(
-                    "\n") else f"{prefix}{backticks}{language}{suffix}"
+            # 检查是否为不带语言的代码块起始
+            start_match = start_pattern.match(line)
+            # 检查是否为带语言的代码块起始
+            lang_match = lang_pattern.match(line)
+
+            if start_match:
+                prefix, backticks, suffix = start_match.groups()
+                # 添加语言参数后重构该行（保留原始前缀和尾随空白）
+                line = f"{prefix}{backticks}{language}{suffix}\n"
                 in_code_block = True
-            elif line.strip().startswith("```"):
-                # 如果行中含有除空白之外的其他内容，则视为已指定语言（或其他标记），直接进入代码块模式
+            elif lang_match:
+                # 如果已经有语言标记，直接进入代码块模式
                 in_code_block = True
         else:
-            # 检测代码块结束（行中以 ``` 开头）
-            if line.strip().startswith("```"):
+            # 检测代码块结束
+            end_match = end_pattern.match(line)
+            if end_match:
                 in_code_block = False
 
         # 同时对每一行内的 $$公式$$ 替换为 $公式$
