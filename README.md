@@ -123,6 +123,8 @@ git remote add origin http://xxx
 
 **添加文件并提交**：
 
+注意，写一个.gitignore文件将output排除版本控制
+
 ```text
 git add .
 git commit -m "Initial commit"
