@@ -31,7 +31,7 @@ def process_local_image_copy(abs_img_path, dest_folder):
     return new_filename
 
 
-def process_md_file_local(md_file, output_path):
+def process_md_file_local(md_file, pics_folder):
     """
     处理一个 Markdown 文件：
     - 提取 Markdown 和 HTML 格式的图片路径
@@ -48,16 +48,16 @@ def process_md_file_local(md_file, output_path):
 
     # 获取当前 md 文件所在目录
     md_dir = os.path.dirname(md_file)
-    abs_output_path = os.path.abspath(output_path)
+    abs_output_path = os.path.abspath(pics_folder)
 
     for img_path in img_paths:
         # 判断图片路径是本地路径还是网络 URL
         if img_path.startswith(('http://', 'https://')):
             # 处理网络图片
-            new_filename = download_image(img_path, output_path)
+            new_filename = download_image(img_path, pics_folder)
             if new_filename:
                 # 使用绝对路径替换
-                new_ref = os.path.join(output_path, new_filename).replace('\\', '/')
+                new_ref = os.path.join(pics_folder, new_filename).replace('\\', '/')
                 content = content.replace(img_path, new_ref)
         else:
             # 处理本地图片
@@ -75,8 +75,8 @@ def process_md_file_local(md_file, output_path):
             if os.path.exists(abs_img_path):
                 if os.path.isfile(abs_img_path):  # 确保是文件而不是文件夹
                     # 使用抽离的复制函数处理图片
-                    new_filename = process_local_image_copy(abs_img_path, output_path)
-                    dest_path = os.path.join(output_path, new_filename)
+                    new_filename = process_local_image_copy(abs_img_path, pics_folder)
+                    dest_path = os.path.join(pics_folder, new_filename)
                     print(f"已复制: {abs_img_path} → {dest_path}")
                     # 使用绝对路径替换
                     new_ref = dest_path.replace('\\', '/')
@@ -92,7 +92,7 @@ def process_md_file_local(md_file, output_path):
     print(f"已更新: {md_file}")
 
 
-def process_md_file_with_assets(md_file, output_base_path):
+def process_md_file_with_assets(md_file, output_path):
     """
     处理单个 Markdown 文件，将其拷贝到 output_base_path/<md_name>/ 下，
     并在该文件夹中建立 assets 文件夹保存相关图片。
@@ -101,7 +101,7 @@ def process_md_file_with_assets(md_file, output_base_path):
     # 创建对应的输出文件夹及 assets 子文件夹
     md_filename = os.path.basename(md_file)
     md_name, _ = os.path.splitext(md_filename)
-    target_folder = os.path.join(output_base_path, md_name)
+    target_folder = os.path.join(output_path, md_name)
     assets_folder = os.path.join(target_folder, "assets")
     os.makedirs(assets_folder, exist_ok=True)
 
@@ -194,38 +194,51 @@ def process_md_file_remote(md_file):
         f.write(content)
     print(f"已更新: {md_file}")
 
-def format_mdfile(filepath, language="text"):
-    '''
-    若代码块没有指定语言，Typera中能正常显示，但是博客中的markdown解析器通常会错误显示。
-    '''
+def format_mdfile(filepath, output_path, language="text"):
+    """
+    对代码块进行格式化：若代码块没有指定语言，则添加指定语言。
+    同时将修改后的文件保存到 output_path/updated_files/<category> 下，由于md格式存在不确定性，脚本处理结果不一定符合预期！。
+    """
     with open(filepath, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
     in_code_block = False
     new_lines = []
+    # 匹配整行仅包含可选空白、可选列表标记和三个反引号（无其他内容）
+    pattern = re.compile(r'^(\s*(?:[-*+]\s+)?)(```)(\s*)$')
+
     for line in lines:
-        stripped = line.strip()
-        # 判断是否为代码块标记
-        if stripped.startswith("```"):
-            if not in_code_block:
-                # 当前为代码块的起始位置
-                # 如果这一行只有三个反引号，则添加语言参数
-                if stripped == "```":
-                    # 这里使用replace仅替换第一次出现的```，保留原有的换行符和空白
-                    line = line.replace("```", f"```{language}", 1)
+        # 若不在代码块内，尝试匹配代码块起始行
+        if not in_code_block:
+            match = pattern.match(line)
+            if match:
+                prefix, backticks, suffix = match.groups()
+                # 添加语言参数后重构该行（保留原始尾随空白）
+                line = f"{prefix}{backticks}{language}{suffix}\n" if not line.endswith(
+                    "\n") else f"{prefix}{backticks}{language}{suffix}"
                 in_code_block = True
-            else:
-                # 当前为代码块的结束位置，不添加语言
-                in_code_block = False
+            elif line.strip().startswith("```"):
+                # 如果行中含有除空白之外的其他内容，则视为已指定语言（或其他标记），直接进入代码块模式
+                in_code_block = True
         else:
-            # 在非代码块的行中，将同行 $$公式$$ 替换为 $公式$
-            # 使用正则表达式进行替换，注意采用非贪婪匹配
-            line = re.sub(r'\$\$(.+?)\$\$', r'$\1$', line)
+            # 检测代码块结束（行中以 ``` 开头）
+            if line.strip().startswith("```"):
+                in_code_block = False
+
+        # 同时对每一行内的 $$公式$$ 替换为 $公式$
+        line = re.sub(r'\$\$(.+?)\$\$', r'$\1$', line)
         new_lines.append(line)
 
-    # 将修改后的内容写回文件（也可选择写入新文件）
-    with open(filepath, 'w', encoding='utf-8') as f:
+    # 计算保存路径：
+    # 取原文件所在文件夹的名称作为 category
+    category = os.path.basename(os.path.dirname(filepath))
+    target_folder = os.path.join(output_path, category)
+    os.makedirs(target_folder, exist_ok=True)
+    target_md_path = os.path.join(target_folder, os.path.basename(filepath))
+
+    with open(target_md_path, 'w', encoding='utf-8') as f:
         f.writelines(new_lines)
+    print(f"已格式化并保存: {target_md_path}")
 
 
 def scan_files(base_folder, exclude_folders):
@@ -246,35 +259,40 @@ def scan_files(base_folder, exclude_folders):
 
 def process_md_files(input_path, output_path, type, exclude_folders=None):
     """
-    处理输入目录下所有 Markdown 文件，并将处理后的图片保存到 output_path。
-    type 参数决定了使用哪种处理方式：
+    处理输入目录下所有 Markdown 文件，并将处理后的图片保存到 output_path/pics，
+    最后将经过 format_mdfile 格式化后的 Markdown 文件保存到 output_path/updated_files/<category> 下
+    type 参数决定了使用哪种图片处理方式：
         type == 1: process_md_file_local
         type == 2: process_md_file_with_assets
         type == 3: process_md_file_remote
-        type == 4:
+        type == 4: 仅执行格式化（format_mdfile）
     """
-    # 创建输出目录（如果不存在）
     os.makedirs(output_path, exist_ok=True)
-
-    # 获取 Markdown 文件列表
+    # 确保 pics 文件夹存在
+    pics_folder = os.path.join(output_path, "pics")
+    assets_type_folder=os.path.join(output_path, "assets_type")
+    updated_folder=os.path.join(output_path, "updated_files")
+    os.makedirs(pics_folder, exist_ok=True)
+    os.makedirs(assets_type_folder, exist_ok=True)
+    os.makedirs(updated_folder, exist_ok=True)
     if exclude_folders is None:
         exclude_folders = []
     md_files = scan_files(input_path, exclude_folders)
 
-    # 遍历处理所有 Markdown 文件
     for md_file in md_files:
+        # 根据不同类型先进行图片处理（如果需要）
         if type == 1:
-            process_md_file_local(md_file, output_path)  # url改为本地，图片存output_path
+            process_md_file_local(md_file, pics_folder)
         elif type == 2:
-            process_md_file_with_assets(md_file, output_path)  # url改为本地，assets方式，图片和md文件都存output_path
+            process_md_file_with_assets(md_file, assets_type_folder)
         elif type == 3:
-            process_md_file_remote(md_file)  # 图片url改为公网链接
+            process_md_file_remote(md_file)
         elif type == 4:
-            format_mdfile(md_file)
+            format_mdfile(md_file, updated_folder)
         else:
             print(f"未知的处理类型: {type}")
 
-    print("该文件夹下的md_files已全部处理完成！", os.path.abspath(input_path))
+    print("该文件夹下的 Markdown 文件已全部处理完成！")
 
 
 if __name__ == "__main__":
@@ -289,7 +307,9 @@ if __name__ == "__main__":
         type_value = 4
 
     # 这里的输入输出路径根据实际情况修改
-    input_path = os.getenv('BASE_FOLDER')  #docker环境
-    # input_path = r'D:\folder\study\md_files'
-    output_path = os.getenv('OUTPUT_FOLDER')
+    # input_path = os.getenv('BASE_FOLDER')  #docker环境
+    input_path=r'D:\folder\study\md_files'
+    # output_path = os.getenv('OUTPUT_FOLDER')
+    output_path=r'D:\folder\study\md_files\output'
+
     process_md_files(input_path, output_path, type_value)

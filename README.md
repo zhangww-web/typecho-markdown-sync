@@ -81,9 +81,9 @@ md_files
 │   ├── file3.md
 │   └── file4.md
 └── output
-    ├── image1.png
-    ├── image2.jpg
-    └── ... (其他图片文件)
+    ├── assets_type
+    ├── pics
+    └── updated_files
 
 ```
 
@@ -92,13 +92,14 @@ md_files
 如果你现有的图片分散在系统中，可以使用 `transfer_md/transfer.py` 脚本来统一处理。该脚本需要传入三个参数：
 
 - **input_path：** 指定包含 Markdown 文件的根目录（例如上例中的 `md_files`）。
-- **output_path：** 指定统一存放处理后图片的目标文件夹（例如上例中的 `output`）。
+- **output_path：** 输出文件夹（例如上例中的 `output`）。
 - **type_value**：
   - `1`：扫描 `input_path` 下所有 Markdown 文件，将其中引用的本地图片复制到 `output_path` 中，同时更新 Markdown 文件中的图片 URL 为 `output_path` 内的路径；
-  - `2`：为每个 Markdown 文件建立单独的文件夹（以文件名命名），将 Markdown 文件及其依赖图片存入该文件夹中，图片存放在文件夹下的 `assets` 子目录中，整体保存在 `output_path` 内；
+  - `2`：为每个 Markdown 文件建立单独的文件夹（以文件名命名），图片存放在文件夹下的 `assets` 子目录中，整体存入`assets_type`文件夹中，；
   - `3`：扫描 Markdown 文件中的本地图片，将其上传到图床（获取公网 URL），并将 Markdown 文件中对应的图片 URL 替换为公网地址。
+  - `4`：预处理Markdown 文件，将公式块和代码块格式化，以便于Markdown解析器解析（本地typora编辑器对于md格式比较宽容，但博客中使用的md解析器插件不一定能正确渲染！）
 
-对于本项目，需要将图片统一用公网URL表示。即`type_value=3`
+
 
 
 
